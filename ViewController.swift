@@ -16,10 +16,12 @@ import UIKit
 import MapKit
 import CoreLocation
 
-class ViewController: UIViewController, CLLocationManagerDelegate {
+class ViewController: UIViewController, CLLocationManagerDelegate, UIGestureRecognizerDelegate {
     
     @IBOutlet weak var mapView: MKMapView!
     var locManager: CLLocationManager!
+    @IBOutlet var longPressGesRec: UILongPressGestureRecognizer!
+    var pointAno: MKPointAnnotation = MKPointAnnotation()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -32,6 +34,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate {
         locManager.requestWhenInUseAuthorization()
         
         initMap()
+        
+        longPressGesRec.delegate = self // 不要？
     }
     
     // 地図の初期化関数
@@ -49,6 +53,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
     }
 
-
+    // ロングタップ検出
+    @IBAction func mapViewDidLongPress(_ sender: UILongPressGestureRecognizer) {
+        // ロングタップ開始
+        if sender.state == .began {
+            print("ロングタップ開始")
+        }
+        // ロングタップ終了
+        if sender.state == .ended {  // ifの前にelseがあってもいい（あったほうがいい？）
+            print("ロングタップ終了")
+        }
+    }
+    
 }
 
