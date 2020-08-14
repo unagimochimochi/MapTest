@@ -13,10 +13,12 @@
 //
 
 import UIKit
+import MapKit
 import CoreLocation
 
 class ViewController: UIViewController, CLLocationManagerDelegate {
     
+    @IBOutlet weak var mapView: MKMapView!
     var locManager: CLLocationManager!
 
     override func viewDidLoad() {
@@ -28,8 +30,21 @@ class ViewController: UIViewController, CLLocationManagerDelegate {
         
         // 位置情報利用の許可を得る
         locManager.requestWhenInUseAuthorization()
+        
+        initMap()
     }
     
+    // 地図の初期化関数
+    func initMap() {
+        // 縮尺
+        var region: MKCoordinateRegion = mapView.region
+        region.span.latitudeDelta = 0.02
+        region.span.longitudeDelta = 0.02
+        mapView.setRegion(region, animated: true)
+        
+        // ユーザーを中心に地図を表示
+        mapView.userTrackingMode = .follow
+    }
     // 位置情報利用の認証が変更されたとき
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
     }
