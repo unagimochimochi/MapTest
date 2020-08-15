@@ -79,25 +79,28 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UIGestureReco
             let latNum = Double(latStr)!
             
             let location = CLLocation(latitude: latNum, longitude: lonNum)
-            geocoder.reverseGeocodeLocation(location, preferredLocale: nil, completionHandler: {(placemarks, error) in
-                guard let placemark = placemarks?.first, error == nil,
-                    let administrativeArea = placemark.administrativeArea, //県
-                    let locality = placemark.locality, // 市区町村
-                    let throughfare = placemark.thoroughfare, // 丁目を含む地名
-                    let subThoroughfare = placemark.subThoroughfare // 番地
-                    else {
-                        return
-                }
-                print(administrativeArea + locality + throughfare + subThoroughfare)
-                
-                // ピンを定義
-                self.pointAno.coordinate = center
-                self.pointAno.title = administrativeArea + locality + throughfare + subThoroughfare
-                
-                self.mapView.addAnnotation(self.pointAno)
-            })
+            geocoder.reverseGeocodeLocation(location, preferredLocale: nil, completionHandler: GeocodeCompHandler(placemarks:error:))
+            
+            // ピンを定義
+            self.pointAno.coordinate = center
+            // ピンを立てる
+            self.mapView.addAnnotation(self.pointAno)
         }
     }
     
+    // reverseGeocodeLocation(_:preferredLocale:completionHandler:)の第3引数
+    // 何かに使えそう&クロージャに慣れないので外側に関数を作成した
+    func GeocodeCompHandler(placemarks: [CLPlacemark]?, error: Error?) {
+        guard let placemark = placemarks?.first, error == nil,
+            let administrativeArea = placemark.administrativeArea, //県
+            let locality = placemark.locality, // 市区町村
+            let throughfare = placemark.thoroughfare, // 丁目を含む地名
+            let subThoroughfare = placemark.subThoroughfare // 番地
+            else {
+                return
+        }
+        print(administrativeArea + locality + throughfare + subThoroughfare)
+        self.pointAno.title = administrativeArea + locality + throughfare + subThoroughfare
+    }
 }
 
