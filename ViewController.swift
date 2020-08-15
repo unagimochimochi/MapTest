@@ -22,6 +22,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UIGestureReco
     var locManager: CLLocationManager!
     @IBOutlet var longPressGesRec: UILongPressGestureRecognizer!
     var pointAno: MKPointAnnotation = MKPointAnnotation()
+    let geocoder = CLGeocoder()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -49,6 +50,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UIGestureReco
         // ユーザーを中心に地図を表示
         mapView.userTrackingMode = .follow
     }
+    
     // 位置情報利用の認証が変更されたとき
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
     }
@@ -58,10 +60,42 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UIGestureReco
         // ロングタップ開始
         if sender.state == .began {
             print("ロングタップ開始")
+            mapView.removeAnnotation(pointAno)
         }
         // ロングタップ終了
         if sender.state == .ended {  // ifの前にelseがあってもいい（あったほうがいい？）
             print("ロングタップ終了")
+            
+            // タップした位置の緯度と経度を算出
+            let tapPoint = sender.location(in: view)
+            let center = mapView.convert(tapPoint, toCoordinateFrom: mapView)
+            
+            let lonStr = center.longitude.description
+            let latStr = center.latitude.description
+            print("lon : " + lonStr)
+            print("lat : " + latStr)
+            
+            let lonNum = Double(lonStr)!
+            let latNum = Double(latStr)!
+            
+            let location = CLLocation(latitude: latNum, longitude: lonNum)
+            geocoder.reverseGeocodeLocation(location, preferredLocale: nil, completionHandler: {(placemarks, error) in
+                guard let placemark = placemarks?.first, error == nil,
+                    let administrativeArea = placemark.administrativeArea, //県
+                    let locality = placemark.locality, // 市区町村
+                    let throughfare = placemark.thoroughfare, // 丁目を含む地名
+                    let subThoroughfare = placemark.subThoroughfare // 番地
+                    else {
+                        return
+                }
+                print(administrativeArea + locality + throughfare + subThoroughfare)
+                
+                // ピンを定義
+                self.pointAno.coordinate = center
+                self.pointAno.title = administrativeArea + locality + throughfare + subThoroughfare
+                
+                self.mapView.addAnnotation(self.pointAno)
+            })
         }
     }
     
