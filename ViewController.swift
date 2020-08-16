@@ -134,5 +134,24 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         
         return anoView
     }
+    
+    // 吹き出しアクセサリー押下時
+    func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
+        // 右側のボタンでReceiveVCに遷移
+        if control == view.rightCalloutAccessoryView {
+            self.performSegue(withIdentifier: "toReceiveVC", sender: nil)
+        }
+    }
+    
+    // 遷移時に住所を渡す
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        guard let identifier = segue.identifier else {
+            return
+        }
+        if identifier == "toReceiveVC" {
+            let receiveVC = segue.destination as! ReceiveViewController
+            receiveVC.address = self.pointAno.title ?? ""
+        }
+    }
 }
 
