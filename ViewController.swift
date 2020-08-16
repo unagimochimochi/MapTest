@@ -16,7 +16,7 @@ import UIKit
 import MapKit
 import CoreLocation
 
-class ViewController: UIViewController, CLLocationManagerDelegate, UIGestureRecognizerDelegate {
+class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDelegate, UIGestureRecognizerDelegate {
     
     @IBOutlet weak var mapView: MKMapView!
     var locManager: CLLocationManager!
@@ -27,6 +27,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UIGestureReco
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        
+        mapView.delegate = self
         
         locManager = CLLocationManager()
         locManager.delegate = self
@@ -81,10 +83,12 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UIGestureReco
             let location = CLLocation(latitude: latNum, longitude: lonNum)
             geocoder.reverseGeocodeLocation(location, preferredLocale: nil, completionHandler: GeocodeCompHandler(placemarks:error:))
             
-            // ピンを定義
-            self.pointAno.coordinate = center
+            // ピンの座標
+            pointAno.coordinate = center
             // ピンを立てる
-            self.mapView.addAnnotation(self.pointAno)
+            mapView.addAnnotation(pointAno)
+            // ピンを最初から選択状態にする
+            mapView.selectAnnotation(pointAno, animated: true)
         }
     }
     
@@ -101,6 +105,34 @@ class ViewController: UIViewController, CLLocationManagerDelegate, UIGestureReco
         }
         print(administrativeArea + locality + throughfare + subThoroughfare)
         self.pointAno.title = administrativeArea + locality + throughfare + subThoroughfare
+    }
+    
+    // ピンの詳細設定
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        // 現在地にはピンを立てない
+        if annotation is MKUserLocation {
+            return nil
+        }
+        
+        let anoView = MKPinAnnotationView(annotation: pointAno, reuseIdentifier: nil)
+        
+        // 吹き出しを表示
+        anoView.canShowCallout = true
+        
+        // 吹き出し内の予定を追加ボタン
+        let addPlanButton = UIButton()
+        addPlanButton.frame = CGRect(x: 0, y: 0, width: 85, height: 36)
+        addPlanButton.setTitle("予定を追加", for: .normal)
+        addPlanButton.setTitleColor(.white, for: .normal)
+        addPlanButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15.0)
+        addPlanButton.layer.backgroundColor = UIColor.orange.cgColor
+        addPlanButton.layer.masksToBounds = true
+        addPlanButton.layer.cornerRadius = 8
+        
+        // 吹き出しの右側にボタンをセット
+        anoView.rightCalloutAccessoryView = addPlanButton
+        
+        return anoView
     }
 }
 
