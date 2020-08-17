@@ -11,7 +11,11 @@ import UIKit
 class ReceiveViewController: UIViewController, UITextFieldDelegate {
     
     var address: String = ""
+    var lon: String = ""
+    var lat: String = ""
     @IBOutlet weak var textField: UITextField!
+    @IBOutlet weak var lonLabel: UILabel!
+    @IBOutlet weak var latLabel: UILabel!
     
     @IBAction func closeButton(_ sender: Any) {
         self.dismiss(animated: true, completion: nil)
@@ -24,6 +28,8 @@ class ReceiveViewController: UIViewController, UITextFieldDelegate {
         textField.delegate = self
         
         textField.text = address
+        lonLabel.text = "lon : " + lon
+        latLabel.text = "lat : " + lat
     }
     
 }

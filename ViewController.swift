@@ -23,6 +23,9 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     @IBOutlet var longPressGesRec: UILongPressGestureRecognizer!
     var pointAno: MKPointAnnotation = MKPointAnnotation()
     let geocoder = CLGeocoder()
+    
+    var lon: String = ""
+    var lat: String = ""
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -77,6 +80,10 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             print("lon : " + lonStr)
             print("lat : " + latStr)
             
+            // 変数にタップした位置の緯度と経度をセット
+            lon = lonStr
+            lat = latStr
+                        
             let lonNum = Double(lonStr)!
             let latNum = Double(latStr)!
             
@@ -143,7 +150,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         }
     }
     
-    // 遷移時に住所を渡す
+    // 遷移時に住所と緯度と経度を渡す
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         guard let identifier = segue.identifier else {
             return
@@ -151,6 +158,8 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         if identifier == "toReceiveVC" {
             let receiveVC = segue.destination as! ReceiveViewController
             receiveVC.address = self.pointAno.title ?? ""
+            receiveVC.lon = self.lon
+            receiveVC.lat = self.lat
         }
     }
 }
