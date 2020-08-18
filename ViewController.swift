@@ -20,6 +20,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     
     @IBOutlet weak var mapView: MKMapView!
     var locManager: CLLocationManager!
+    @IBOutlet var tapGesRec: UITapGestureRecognizer!
     @IBOutlet var longPressGesRec: UILongPressGestureRecognizer!
     var pointAno: MKPointAnnotation = MKPointAnnotation()
     let geocoder = CLGeocoder()
@@ -41,6 +42,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         
         initMap()
         
+        tapGesRec.delegate = self // 不要？
         longPressGesRec.delegate = self // 不要？
     }
     
@@ -58,6 +60,14 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     
     // 位置情報利用の認証が変更されたとき
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+    }
+    
+    // タップ検出
+    @IBAction func mapViewDidTap(_ sender: UITapGestureRecognizer) {
+        if sender.state == .ended {
+            print("タップ")
+            mapView.removeAnnotation(pointAno)
+        }
     }
 
     // ロングタップ検出
@@ -110,7 +120,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             else {
                 return
         }
-        print(administrativeArea + locality + throughfare + subThoroughfare)
+        
         self.pointAno.title = administrativeArea + locality + throughfare + subThoroughfare
     }
     
