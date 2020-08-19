@@ -28,7 +28,9 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     var lon: String = ""
     var lat: String = ""
     
-    var searchAnnotationTitle: String?
+    var searchAnnotationTitle = [String]()
+    var searchAnnotationLon = [String]()
+    var searchAnnotationLat = [String]()
 
     @IBOutlet weak var placeSearchBar: UISearchBar!
     
@@ -87,8 +89,9 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         if sender.state == .ended {  // ifの前にelseがあってもいい（あったほうがいい？）
             print("ロングタップ終了")
             
-            // prepare(for:sender:) のオプショナルバインディングで場合分けするためnilを代入
-            searchAnnotationTitle = nil
+            // prepare(for:sender:) のオプショナルバインディングで場合分けするためnilにする
+            searchAnnotationTitle.removeAll()
+ 
             
             // タップした位置の緯度と経度を算出
             let tapPoint = sender.location(in: view)
@@ -119,7 +122,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     }
     
     // reverseGeocodeLocation(_:preferredLocale:completionHandler:)の第3引数
-    // 何かに使えそう&クロージャに慣れないので外側に関数を作成した
+    // クロージャに慣れないので外側に関数を作成
     func GeocodeCompHandler(placemarks: [CLPlacemark]?, error: Error?) {
         guard let placemark = placemarks?.first, error == nil,
             let administrativeArea = placemark.administrativeArea, //県
@@ -140,10 +143,10 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             return nil
         }
         
-        let anoView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: nil)
+        let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: nil)
         
         // 吹き出しを表示
-        anoView.canShowCallout = true
+        annotationView.canShowCallout = true
         
         // 吹き出し内の予定を追加ボタン
         let addPlanButton = UIButton()
@@ -156,9 +159,9 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         addPlanButton.layer.cornerRadius = 8
         
         // 吹き出しの右側にボタンをセット
-        anoView.rightCalloutAccessoryView = addPlanButton
+        annotationView.rightCalloutAccessoryView = addPlanButton
         
-        return anoView
+        return annotationView
     }
     
     // 吹き出しアクセサリー押下時
@@ -199,8 +202,8 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
                 let latStr = center.latitude.description
                 
                 // 変数に検索した位置の緯度と経度をセット
-                lon = lonStr
-                lat = latStr
+                searchAnnotationLon.append(lonStr)
+                searchAnnotationLat.append(latStr)
                 
                 // タイトルに場所の名前を表示
                 searchAnnotation.title = searchLocation.placemark.name
@@ -209,8 +212,8 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
                 // ピンを最初から選択状態にする
                 mapView.selectAnnotation(searchAnnotation, animated: true)
                 
-                // メンバ変数 searchAnnotationTitle に場所の名前をセット
-                searchAnnotationTitle = searchAnnotation.title
+                // searchAnnotationTitle配列に場所の名前をセット
+                searchAnnotationTitle.append(searchAnnotation.title ?? "")
                 
             } else {
                 print("error")
@@ -232,16 +235,23 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         guard let identifier = segue.identifier else {
             return
         }
+        
         if identifier == "toReceiveVC" {
             let receiveVC = segue.destination as! ReceiveViewController
-            if let searchAnnotationTitle = searchAnnotationTitle {
-                receiveVC.address = searchAnnotationTitle
-            } else {
+            
+            // 配列が空のとき
+            if searchAnnotationTitle.isEmpty == true {
                 receiveVC.address = self.annotation.title ?? ""
+                receiveVC.lon = self.lon
+                receiveVC.lat = self.lat
+            } else {
+                // いま選択されているピンの判別方法がわからない(´･_･`)
+                receiveVC.address = self.searchAnnotationTitle[0]
+                receiveVC.lon = self.searchAnnotationLon[0]
+                receiveVC.lat = self.searchAnnotationLat[0]
             }
-            receiveVC.lon = self.lon
-            receiveVC.lat = self.lat
         }
     }
+    
 }
 
