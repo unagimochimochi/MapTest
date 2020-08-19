@@ -16,18 +16,22 @@ import UIKit
 import MapKit
 import CoreLocation
 
-class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDelegate, UIGestureRecognizerDelegate {
+class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDelegate, UIGestureRecognizerDelegate, UISearchBarDelegate {
     
     @IBOutlet weak var mapView: MKMapView!
     var locManager: CLLocationManager!
     @IBOutlet var tapGesRec: UITapGestureRecognizer!
     @IBOutlet var longPressGesRec: UILongPressGestureRecognizer!
-    var pointAno: MKPointAnnotation = MKPointAnnotation()
+    var annotation: MKPointAnnotation = MKPointAnnotation()
     let geocoder = CLGeocoder()
     
     var lon: String = ""
     var lat: String = ""
+    
+    var searchAnnotationTitle: String?
 
+    @IBOutlet weak var placeSearchBar: UISearchBar!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
@@ -44,6 +48,8 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         
         tapGesRec.delegate = self // 不要？
         longPressGesRec.delegate = self // 不要？
+        
+        placeSearchBar.delegate = self
     }
     
     // 地図の初期化関数
@@ -66,7 +72,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     @IBAction func mapViewDidTap(_ sender: UITapGestureRecognizer) {
         if sender.state == .ended {
             print("タップ")
-            mapView.removeAnnotation(pointAno)
+            mapView.removeAnnotation(annotation)
         }
     }
 
@@ -75,11 +81,14 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         // ロングタップ開始
         if sender.state == .began {
             print("ロングタップ開始")
-            mapView.removeAnnotation(pointAno)
+            mapView.removeAnnotation(annotation)
         }
         // ロングタップ終了
         if sender.state == .ended {  // ifの前にelseがあってもいい（あったほうがいい？）
             print("ロングタップ終了")
+            
+            // prepare(for:sender:) のオプショナルバインディングで場合分けするためnilを代入
+            searchAnnotationTitle = nil
             
             // タップした位置の緯度と経度を算出
             let tapPoint = sender.location(in: view)
@@ -101,11 +110,11 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             geocoder.reverseGeocodeLocation(location, preferredLocale: nil, completionHandler: GeocodeCompHandler(placemarks:error:))
             
             // ピンの座標
-            pointAno.coordinate = center
+            annotation.coordinate = center
             // ピンを立てる
-            mapView.addAnnotation(pointAno)
+            mapView.addAnnotation(annotation)
             // ピンを最初から選択状態にする
-            mapView.selectAnnotation(pointAno, animated: true)
+            mapView.selectAnnotation(annotation, animated: true)
         }
     }
     
@@ -121,7 +130,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
                 return
         }
         
-        self.pointAno.title = administrativeArea + locality + throughfare + subThoroughfare
+        self.annotation.title = administrativeArea + locality + throughfare + subThoroughfare
     }
     
     // ピンの詳細設定
@@ -131,7 +140,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             return nil
         }
         
-        let anoView = MKPinAnnotationView(annotation: pointAno, reuseIdentifier: nil)
+        let anoView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: nil)
         
         // 吹き出しを表示
         anoView.canShowCallout = true
@@ -160,6 +169,64 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         }
     }
     
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        print("検索")
+        
+        // キーボードをとじる
+        self.view.endEditing(true)
+        
+        // 検索条件を作成
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = placeSearchBar.text
+        
+        // 検索範囲はMKMapViewと同じ
+        request.region = mapView.region
+        
+        let localSearch = MKLocalSearch(request: request)
+        localSearch.start(completionHandler: LocalSearchCompHandler(response:error:))
+    }
+    
+    // start(completionHandler:)の引数
+    func LocalSearchCompHandler(response: MKLocalSearch.Response?, error: Error?) -> Void {
+        for searchLocation in (response?.mapItems)! {
+            if error == nil {
+                let searchAnnotation = MKPointAnnotation()
+                // ピンの座標
+                let center = CLLocationCoordinate2DMake(searchLocation.placemark.coordinate.latitude, searchLocation.placemark.coordinate.longitude)
+                searchAnnotation.coordinate = center
+                
+                let lonStr = center.longitude.description
+                let latStr = center.latitude.description
+                
+                // 変数に検索した位置の緯度と経度をセット
+                lon = lonStr
+                lat = latStr
+                
+                // タイトルに場所の名前を表示
+                searchAnnotation.title = searchLocation.placemark.name
+                // ピンを立てる
+                mapView.addAnnotation(searchAnnotation)
+                // ピンを最初から選択状態にする
+                mapView.selectAnnotation(searchAnnotation, animated: true)
+                
+                // メンバ変数 searchAnnotationTitle に場所の名前をセット
+                searchAnnotationTitle = searchAnnotation.title
+                
+            } else {
+                print("error")
+            }
+        }
+    }
+    
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        print("検索キャンセル")
+        
+        // テキストを空にする
+        placeSearchBar.text = ""
+        // キーボードをとじる
+        self.view.endEditing(true)
+    }
+    
     // 遷移時に住所と緯度と経度を渡す
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         guard let identifier = segue.identifier else {
@@ -167,7 +234,11 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         }
         if identifier == "toReceiveVC" {
             let receiveVC = segue.destination as! ReceiveViewController
-            receiveVC.address = self.pointAno.title ?? ""
+            if let searchAnnotationTitle = searchAnnotationTitle {
+                receiveVC.address = searchAnnotationTitle
+            } else {
+                receiveVC.address = self.annotation.title ?? ""
+            }
             receiveVC.lon = self.lon
             receiveVC.lat = self.lat
         }
