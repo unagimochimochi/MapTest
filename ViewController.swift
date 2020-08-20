@@ -28,9 +28,10 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     var lon: String = ""
     var lat: String = ""
     
-    var searchAnnotationTitle = [String]()
-    var searchAnnotationLon = [String]()
-    var searchAnnotationLat = [String]()
+    var searchAnnotationArray = [MKPointAnnotation]()
+    var searchAnnotationTitleArray = [String]()
+    var searchAnnotationLonArray = [String]()
+    var searchAnnotationLatArray = [String]()
 
     @IBOutlet weak var placeSearchBar: UISearchBar!
     
@@ -90,7 +91,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             print("ロングタップ終了")
             
             // prepare(for:sender:) のオプショナルバインディングで場合分けするためnilにする
-            searchAnnotationTitle.removeAll()
+            searchAnnotationTitleArray.removeAll()
  
             
             // タップした位置の緯度と経度を算出
@@ -143,11 +144,6 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             return nil
         }
         
-        let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: nil)
-        
-        // 吹き出しを表示
-        annotationView.canShowCallout = true
-        
         // 吹き出し内の予定を追加ボタン
         let addPlanButton = UIButton()
         addPlanButton.frame = CGRect(x: 0, y: 0, width: 85, height: 36)
@@ -158,10 +154,30 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         addPlanButton.layer.masksToBounds = true
         addPlanButton.layer.cornerRadius = 8
         
-        // 吹き出しの右側にボタンをセット
-        annotationView.rightCalloutAccessoryView = addPlanButton
-        
-        return annotationView
+        // 配列が空のとき（ロングタップでピンを立てたとき）
+        if searchAnnotationTitleArray.isEmpty == true {
+            let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: nil)
+            // 吹き出しを表示
+            annotationView.canShowCallout = true
+            
+            // 吹き出しの右側にボタンをセット
+            annotationView.rightCalloutAccessoryView = addPlanButton
+            
+            return annotationView
+            
+        }
+            
+        // 配列が空ではないとき（検索でピンを立てたとき）
+        else {
+            let searchAnnotationView = MKPinAnnotationView(annotation: searchAnnotationArray as? MKAnnotation, reuseIdentifier: nil)
+            // 吹き出しを表示
+            searchAnnotationView.canShowCallout = true
+            
+            // 吹き出しの右側にボタンをセット
+            searchAnnotationView.rightCalloutAccessoryView = addPlanButton
+            
+            return searchAnnotationView
+        }
     }
     
     // 吹き出しアクセサリー押下時
@@ -174,6 +190,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         print("検索")
+        mapView.removeAnnotation(annotation)
         
         // キーボードをとじる
         self.view.endEditing(true)
@@ -202,18 +219,18 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
                 let latStr = center.latitude.description
                 
                 // 変数に検索した位置の緯度と経度をセット
-                searchAnnotationLon.append(lonStr)
-                searchAnnotationLat.append(latStr)
+                searchAnnotationLonArray.append(lonStr)
+                searchAnnotationLatArray.append(latStr)
                 
                 // タイトルに場所の名前を表示
                 searchAnnotation.title = searchLocation.placemark.name
                 // ピンを立てる
                 mapView.addAnnotation(searchAnnotation)
-                // ピンを最初から選択状態にする
-                mapView.selectAnnotation(searchAnnotation, animated: true)
                 
+                // searchAnnotation配列にピンをセット
+                searchAnnotationArray.append(searchAnnotation)
                 // searchAnnotationTitle配列に場所の名前をセット
-                searchAnnotationTitle.append(searchAnnotation.title ?? "")
+                searchAnnotationTitleArray.append(searchAnnotation.title ?? "")
                 
             } else {
                 print("error")
@@ -240,15 +257,15 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             let receiveVC = segue.destination as! ReceiveViewController
             
             // 配列が空のとき
-            if searchAnnotationTitle.isEmpty == true {
+            if searchAnnotationTitleArray.isEmpty == true {
                 receiveVC.address = self.annotation.title ?? ""
                 receiveVC.lon = self.lon
                 receiveVC.lat = self.lat
             } else {
                 // いま選択されているピンの判別方法がわからない(´･_･`)
-                receiveVC.address = self.searchAnnotationTitle[0]
-                receiveVC.lon = self.searchAnnotationLon[0]
-                receiveVC.lat = self.searchAnnotationLat[0]
+                receiveVC.address = self.searchAnnotationTitleArray[0]
+                receiveVC.lon = self.searchAnnotationLonArray[0]
+                receiveVC.lat = self.searchAnnotationLatArray[0]
             }
         }
     }
