@@ -25,13 +25,13 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     var annotation: MKPointAnnotation = MKPointAnnotation()
     let geocoder = CLGeocoder()
     
-    var lon: String = ""
     var lat: String = ""
+    var lon: String = ""
     
     var searchAnnotationArray = [MKPointAnnotation]()
     var searchAnnotationTitleArray = [String]()
-    var searchAnnotationLonArray = [String]()
     var searchAnnotationLatArray = [String]()
+    var searchAnnotationLonArray = [String]()
 
     @IBOutlet weak var placeSearchBar: UISearchBar!
     
@@ -90,7 +90,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         if sender.state == .ended {  // ifの前にelseがあってもいい（あったほうがいい？）
             print("ロングタップ終了")
             
-            // prepare(for:sender:) のオプショナルバインディングで場合分けするためnilにする
+            // prepare(for:sender:) で場合分けするため配列を空にする
             searchAnnotationTitleArray.removeAll()
  
             
@@ -98,17 +98,18 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             let tapPoint = sender.location(in: view)
             let center = mapView.convert(tapPoint, toCoordinateFrom: mapView)
             
-            let lonStr = center.longitude.description
             let latStr = center.latitude.description
-            print("lon : " + lonStr)
+            let lonStr = center.longitude.description
+            
             print("lat : " + latStr)
+            print("lon : " + lonStr)
             
             // 変数にタップした位置の緯度と経度をセット
-            lon = lonStr
             lat = latStr
-                        
-            let lonNum = Double(lonStr)!
+            lon = lonStr
+            
             let latNum = Double(latStr)!
+            let lonNum = Double(lonStr)!
             
             let location = CLLocation(latitude: latNum, longitude: lonNum)
             geocoder.reverseGeocodeLocation(location, preferredLocale: nil, completionHandler: GeocodeCompHandler(placemarks:error:))
@@ -215,12 +216,12 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
                 let center = CLLocationCoordinate2DMake(searchLocation.placemark.coordinate.latitude, searchLocation.placemark.coordinate.longitude)
                 searchAnnotation.coordinate = center
                 
-                let lonStr = center.longitude.description
                 let latStr = center.latitude.description
+                let lonStr = center.longitude.description
                 
                 // 変数に検索した位置の緯度と経度をセット
-                searchAnnotationLonArray.append(lonStr)
                 searchAnnotationLatArray.append(latStr)
+                searchAnnotationLonArray.append(lonStr)
                 
                 // タイトルに場所の名前を表示
                 searchAnnotation.title = searchLocation.placemark.name
@@ -235,6 +236,19 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             } else {
                 print("error")
             }
+        }
+        
+        if searchAnnotationLatArray.isEmpty == false {
+            // String型からDouble型に変換し、0番目の緯度と経度を取り出す
+            let searchLocationLatNum = Double(searchAnnotationLatArray[0])!
+            let searchLocationLonNum = Double(searchAnnotationLonArray[0])!
+            
+            // 0番目のピンを中心に表示
+            let center = CLLocationCoordinate2D(latitude: searchLocationLatNum, longitude: searchLocationLonNum)
+            mapView.setCenter(center, animated: true)
+            
+        } else {
+            print("配列が空")
         }
     }
     
@@ -256,16 +270,19 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         if identifier == "toReceiveVC" {
             let receiveVC = segue.destination as! ReceiveViewController
             
-            // 配列が空のとき
+            // 配列が空のとき（ロングタップでピンを立てたとき）
             if searchAnnotationTitleArray.isEmpty == true {
                 receiveVC.address = self.annotation.title ?? ""
-                receiveVC.lon = self.lon
                 receiveVC.lat = self.lat
-            } else {
+                receiveVC.lon = self.lon                
+            }
+            
+            // 配列が空ではないとき（検索でピンを立てたとき）
+            else {
                 // いま選択されているピンの判別方法がわからない(´･_･`)
                 receiveVC.address = self.searchAnnotationTitleArray[0]
-                receiveVC.lon = self.searchAnnotationLonArray[0]
                 receiveVC.lat = self.searchAnnotationLatArray[0]
+                receiveVC.lon = self.searchAnnotationLonArray[0]
             }
         }
     }
