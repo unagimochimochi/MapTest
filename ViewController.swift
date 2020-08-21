@@ -209,33 +209,45 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     
     // start(completionHandler:)の引数
     func LocalSearchCompHandler(response: MKLocalSearch.Response?, error: Error?) -> Void {
-        for searchLocation in (response?.mapItems)! {
-            if error == nil {
-                let searchAnnotation = MKPointAnnotation()
-                // ピンの座標
-                let center = CLLocationCoordinate2DMake(searchLocation.placemark.coordinate.latitude, searchLocation.placemark.coordinate.longitude)
-                searchAnnotation.coordinate = center
-                
-                let latStr = center.latitude.description
-                let lonStr = center.longitude.description
-                
-                // 変数に検索した位置の緯度と経度をセット
-                searchAnnotationLatArray.append(latStr)
-                searchAnnotationLonArray.append(lonStr)
-                
-                // タイトルに場所の名前を表示
-                searchAnnotation.title = searchLocation.placemark.name
-                // ピンを立てる
-                mapView.addAnnotation(searchAnnotation)
-                
-                // searchAnnotation配列にピンをセット
-                searchAnnotationArray.append(searchAnnotation)
-                // searchAnnotationTitle配列に場所の名前をセット
-                searchAnnotationTitleArray.append(searchAnnotation.title ?? "")
-                
-            } else {
-                print("error")
+        // 検索がヒットしたとき
+        if let response = response {
+            for searchLocation in (response.mapItems) {
+                if error == nil {
+                    let searchAnnotation = MKPointAnnotation()
+                    // ピンの座標
+                    let center = CLLocationCoordinate2DMake(searchLocation.placemark.coordinate.latitude, searchLocation.placemark.coordinate.longitude)
+                    searchAnnotation.coordinate = center
+                    
+                    let latStr = center.latitude.description
+                    let lonStr = center.longitude.description
+                    
+                    // 変数に検索した位置の緯度と経度をセット
+                    searchAnnotationLatArray.append(latStr)
+                    searchAnnotationLonArray.append(lonStr)
+                    
+                    // タイトルに場所の名前を表示
+                    searchAnnotation.title = searchLocation.placemark.name
+                    // ピンを立てる
+                    mapView.addAnnotation(searchAnnotation)
+                    
+                    // searchAnnotation配列にピンをセット
+                    searchAnnotationArray.append(searchAnnotation)
+                    // searchAnnotationTitle配列に場所の名前をセット
+                    searchAnnotationTitleArray.append(searchAnnotation.title ?? "")
+                    
+                } else {
+                    print("error")
+                }
             }
+        }
+        
+        // 検索がヒットしなかったとき
+        else {
+            let dialog = UIAlertController(title: "検索結果なし", message: "ご迷惑をおかけします。\nどうしてもヒットしない場合は住所を入力してみてください！", preferredStyle: .alert)
+            // OKボタン
+            dialog.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+            // ダイアログを表示
+            self.present(dialog, animated: true, completion: nil)
         }
         
         if searchAnnotationLatArray.isEmpty == false {
