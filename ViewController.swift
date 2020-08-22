@@ -23,15 +23,11 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     @IBOutlet var tapGesRec: UITapGestureRecognizer!
     @IBOutlet var longPressGesRec: UILongPressGestureRecognizer!
     var annotation: MKPointAnnotation = MKPointAnnotation()
+    var searchAnnotationArray = [MKPointAnnotation]()
     let geocoder = CLGeocoder()
     
     var lat: String = ""
     var lon: String = ""
-    
-    var searchAnnotationArray = [MKPointAnnotation]()
-    var searchAnnotationTitleArray = [String]()
-    var searchAnnotationLatArray = [String]()
-    var searchAnnotationLonArray = [String]()
 
     @IBOutlet weak var placeSearchBar: UISearchBar!
     
@@ -95,9 +91,6 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             
             // prepare(for:sender:) で場合分けするため配列を空にする
             searchAnnotationArray.removeAll()
-            searchAnnotationTitleArray.removeAll()
-            searchAnnotationLatArray.removeAll()
-            searchAnnotationLonArray.removeAll()
             
             // タップした位置の緯度と経度を算出
             let tapPoint = sender.location(in: view)
@@ -171,7 +164,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         directionsButton.layer.cornerRadius = 8
         
         // 配列が空のとき（ロングタップでピンを立てたとき）
-        if searchAnnotationTitleArray.isEmpty == true {
+        if searchAnnotationArray.isEmpty == true {
             let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: nil)
             // 吹き出しを表示
             annotationView.canShowCallout = true
@@ -207,7 +200,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         // 左側のボタンで経路を表示
         if control == view.leftCalloutAccessoryView {
             // 配列が空のとき（ロングタップでピンを立てたとき）
-            if searchAnnotationTitleArray.isEmpty == true {
+            if searchAnnotationArray.isEmpty == true {
                 let coordinate = CLLocationCoordinate2D(latitude: view.annotation!.coordinate.latitude, longitude: view.annotation!.coordinate.longitude)
                 let placemark = MKPlacemark(coordinate: coordinate, addressDictionary: nil)
                 let mapItem = MKMapItem(placemark: placemark)
@@ -223,6 +216,9 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         print("検索")
         mapView.removeAnnotation(annotation)
         mapView.removeAnnotations(searchAnnotationArray)
+        
+        // 前回の検索結果を配列から取り除く
+        searchAnnotationArray.removeAll()
         
         // キーボードをとじる
         self.view.endEditing(true)
@@ -249,13 +245,6 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
                     let center = CLLocationCoordinate2DMake(searchLocation.placemark.coordinate.latitude, searchLocation.placemark.coordinate.longitude)
                     searchAnnotation.coordinate = center
                     
-                    let latStr = center.latitude.description
-                    let lonStr = center.longitude.description
-                    
-                    // 変数に検索した位置の緯度と経度をセット
-                    searchAnnotationLatArray.append(latStr)
-                    searchAnnotationLonArray.append(lonStr)
-                    
                     // タイトルに場所の名前を表示
                     searchAnnotation.title = searchLocation.placemark.name
                     // ピンを立てる
@@ -263,8 +252,6 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
                     
                     // searchAnnotation配列にピンをセット
                     searchAnnotationArray.append(searchAnnotation)
-                    // searchAnnotationTitle配列に場所の名前をセット
-                    searchAnnotationTitleArray.append(searchAnnotation.title ?? "")
                     
                 } else {
                     print("error")
@@ -280,14 +267,11 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             // ダイアログを表示
             self.present(dialog, animated: true, completion: nil)
         }
-        
-        if searchAnnotationLatArray.isEmpty == false {
-            // String型からDouble型に変換し、0番目の緯度と経度を取り出す
-            let searchLocationLatNum = Double(searchAnnotationLatArray[0])!
-            let searchLocationLonNum = Double(searchAnnotationLonArray[0])!
-            
-            // 0番目のピンを中心に表示
-            let center = CLLocationCoordinate2D(latitude: searchLocationLatNum, longitude: searchLocationLonNum)
+
+        // 0番目のピンを中心に表示
+        if searchAnnotationArray.isEmpty == false {
+            let searchAnnotation = searchAnnotationArray[0]
+            let center = CLLocationCoordinate2D(latitude: searchAnnotation.coordinate.latitude, longitude: searchAnnotation.coordinate.longitude)
             mapView.setCenter(center, animated: true)
             
         } else {
@@ -314,7 +298,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             let receiveVC = segue.destination as! ReceiveViewController
             
             // 配列が空のとき（ロングタップでピンを立てたとき）
-            if searchAnnotationTitleArray.isEmpty == true {
+            if searchAnnotationArray.isEmpty == true {
                 receiveVC.address = self.annotation.title ?? ""
                 receiveVC.lat = self.lat
                 receiveVC.lon = self.lon                
