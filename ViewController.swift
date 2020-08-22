@@ -84,15 +84,20 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         // ロングタップ開始
         if sender.state == .began {
             print("ロングタップ開始")
+            
+            // 古いピンを削除する
             mapView.removeAnnotation(annotation)
+            mapView.removeAnnotations(searchAnnotationArray)
         }
         // ロングタップ終了
         if sender.state == .ended {  // ifの前にelseがあってもいい（あったほうがいい？）
             print("ロングタップ終了")
             
             // prepare(for:sender:) で場合分けするため配列を空にする
+            searchAnnotationArray.removeAll()
             searchAnnotationTitleArray.removeAll()
- 
+            searchAnnotationLatArray.removeAll()
+            searchAnnotationLonArray.removeAll()
             
             // タップした位置の緯度と経度を算出
             let tapPoint = sender.location(in: view)
@@ -155,6 +160,16 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         addPlanButton.layer.masksToBounds = true
         addPlanButton.layer.cornerRadius = 8
         
+        // 吹き出し内の経路を表示ボタン
+        let directionsButton = UIButton()
+        directionsButton.frame = CGRect(x: 0, y: 0, width: 85, height: 36)
+        directionsButton.setTitle("経路を表示", for: .normal)
+        directionsButton.setTitleColor(.white, for: .normal)
+        directionsButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15.0)
+        directionsButton.layer.backgroundColor = UIColor.blue.cgColor
+        directionsButton.layer.masksToBounds = true
+        directionsButton.layer.cornerRadius = 8
+        
         // 配列が空のとき（ロングタップでピンを立てたとき）
         if searchAnnotationTitleArray.isEmpty == true {
             let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: nil)
@@ -163,6 +178,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             
             // 吹き出しの右側にボタンをセット
             annotationView.rightCalloutAccessoryView = addPlanButton
+            annotationView.leftCalloutAccessoryView = directionsButton
             
             return annotationView
             
@@ -187,11 +203,26 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         if control == view.rightCalloutAccessoryView {
             self.performSegue(withIdentifier: "toReceiveVC", sender: nil)
         }
+        
+        // 左側のボタンで経路を表示
+        if control == view.leftCalloutAccessoryView {
+            // 配列が空のとき（ロングタップでピンを立てたとき）
+            if searchAnnotationTitleArray.isEmpty == true {
+                let coordinate = CLLocationCoordinate2D(latitude: view.annotation!.coordinate.latitude, longitude: view.annotation!.coordinate.longitude)
+                let placemark = MKPlacemark(coordinate: coordinate, addressDictionary: nil)
+                let mapItem = MKMapItem(placemark: placemark)
+                
+                let options: [String: Any]? = [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving] // 車で移動
+                
+                mapItem.openInMaps(launchOptions: options)
+            }
+        }
     }
     
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         print("検索")
         mapView.removeAnnotation(annotation)
+        mapView.removeAnnotations(searchAnnotationArray)
         
         // キーボードをとじる
         self.view.endEditing(true)
@@ -291,10 +322,22 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             
             // 配列が空ではないとき（検索でピンを立てたとき）
             else {
-                // いま選択されているピンの判別方法がわからない(´･_･`)
-                receiveVC.address = self.searchAnnotationTitleArray[0]
-                receiveVC.lat = self.searchAnnotationLatArray[0]
-                receiveVC.lon = self.searchAnnotationLonArray[0]
+                // 選択されているピンを新たな配列に格納
+                let selectedSearchAnnotationArray = mapView.selectedAnnotations
+                
+                // 選択されているピンは1つのため、0番目を取り出す
+                let selectedSearchAnnotation = selectedSearchAnnotationArray[0]
+                
+                // ピンの緯度と経度を取得
+                let latStr = selectedSearchAnnotation.coordinate.latitude.description
+                let lonStr = selectedSearchAnnotation.coordinate.longitude.description
+                
+                // 選択されているピンからタイトルを取得
+                if let selectedSearchAnnotationTitle = selectedSearchAnnotation.title {
+                    receiveVC.address = selectedSearchAnnotationTitle ?? ""
+                    receiveVC.lat = latStr
+                    receiveVC.lon = lonStr
+                }
             }
         }
     }
