@@ -31,9 +31,37 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
 
     @IBOutlet weak var placeSearchBar: UISearchBar!
     
+    @IBOutlet weak var detailsView: UIView!
+    @IBOutlet weak var detailsViewHeight: NSLayoutConstraint!
+    
+    @IBOutlet weak var placeNameLabel: UILabel!
+    @IBOutlet weak var placeAddressLabel: UILabel!
+    @IBOutlet weak var directionsButton: UIButton!
+    @IBOutlet weak var addPlanButton: UIButton!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        
+        hiddenDetailsView()
+        
+        // 詳細ビュー
+        detailsView.layer.masksToBounds = true
+        detailsView.layer.cornerRadius = 20
+        
+        // 詳細ビューの予定を追加ボタン
+        addPlanButton.setTitleColor(.white, for: .normal)
+        addPlanButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15.0)
+        addPlanButton.layer.backgroundColor = UIColor.orange.cgColor
+        addPlanButton.layer.masksToBounds = true
+        addPlanButton.layer.cornerRadius = 8
+        
+        // 詳細ビューの経路を表示ボタン
+        directionsButton.setTitleColor(.white, for: .normal)
+        directionsButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15.0)
+        directionsButton.layer.backgroundColor = UIColor.blue.cgColor
+        directionsButton.layer.masksToBounds = true
+        directionsButton.layer.cornerRadius = 8
         
         mapView.delegate = self
         
@@ -72,6 +100,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         if sender.state == .ended {
             print("タップ")
             mapView.removeAnnotation(annotation)
+            hiddenDetailsView()
         }
     }
 
@@ -134,6 +163,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         }
         
         self.annotation.title = administrativeArea + locality + throughfare + subThoroughfare
+        placeAddressLabel.text = administrativeArea + locality + throughfare + subThoroughfare
     }
     
     // ピンの詳細設定
@@ -143,25 +173,12 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             return nil
         }
         
-        // 吹き出し内の予定を追加ボタン
-        let addPlanButton = UIButton()
-        addPlanButton.frame = CGRect(x: 0, y: 0, width: 85, height: 36)
-        addPlanButton.setTitle("予定を追加", for: .normal)
-        addPlanButton.setTitleColor(.white, for: .normal)
-        addPlanButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15.0)
-        addPlanButton.layer.backgroundColor = UIColor.orange.cgColor
-        addPlanButton.layer.masksToBounds = true
-        addPlanButton.layer.cornerRadius = 8
-        
-        // 吹き出し内の経路を表示ボタン
-        let directionsButton = UIButton()
-        directionsButton.frame = CGRect(x: 0, y: 0, width: 85, height: 36)
-        directionsButton.setTitle("経路を表示", for: .normal)
-        directionsButton.setTitleColor(.white, for: .normal)
-        directionsButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 15.0)
-        directionsButton.layer.backgroundColor = UIColor.blue.cgColor
-        directionsButton.layer.masksToBounds = true
-        directionsButton.layer.cornerRadius = 8
+        // 吹き出し内の･･･ボタン
+        let detailsButton = UIButton()
+        detailsButton.frame = CGRect(x: 0, y: 0, width: 36, height: 36)
+        detailsButton.setTitle("･･･", for: .normal)
+        detailsButton.setTitleColor(.orange, for: .normal)
+        detailsButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 18.0)
         
         // 配列が空のとき（ロングタップでピンを立てたとき）
         if searchAnnotationArray.isEmpty == true {
@@ -170,8 +187,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             annotationView.canShowCallout = true
             
             // 吹き出しの右側にボタンをセット
-            annotationView.rightCalloutAccessoryView = addPlanButton
-            annotationView.leftCalloutAccessoryView = directionsButton
+            annotationView.rightCalloutAccessoryView = detailsButton
             
             return annotationView
             
@@ -184,7 +200,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
             searchAnnotationView.canShowCallout = true
             
             // 吹き出しの右側にボタンをセット
-            searchAnnotationView.rightCalloutAccessoryView = addPlanButton
+            searchAnnotationView.rightCalloutAccessoryView = detailsButton
             
             return searchAnnotationView
         }
@@ -192,23 +208,65 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     
     // 吹き出しアクセサリー押下時
     func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
-        // 右側のボタンでReceiveVCに遷移
+        // ･･･ボタンで詳細ビューを表示
         if control == view.rightCalloutAccessoryView {
-            self.performSegue(withIdentifier: "toReceiveVC", sender: nil)
-        }
-        
-        // 左側のボタンで経路を表示
-        if control == view.leftCalloutAccessoryView {
+            displayDetailsView()
+            
             // 配列が空のとき（ロングタップでピンを立てたとき）
             if searchAnnotationArray.isEmpty == true {
-                let coordinate = CLLocationCoordinate2D(latitude: view.annotation!.coordinate.latitude, longitude: view.annotation!.coordinate.longitude)
-                let placemark = MKPlacemark(coordinate: coordinate, addressDictionary: nil)
-                let mapItem = MKMapItem(placemark: placemark)
-                
-                let options: [String: Any]? = [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving] // 車で移動
-                
-                mapItem.openInMaps(launchOptions: options)
+                placeNameLabel.text = annotation.title
             }
+            
+            // 配列が空ではないとき（検索でピンを立てたとき）
+            else if searchAnnotationArray.isEmpty == false {
+                // 選択されているピンを新たな配列に格納
+                let selectedSearchAnnotationArray = mapView.selectedAnnotations
+                
+                // 選択されているピンは1つのため、0番目を取り出す
+                let selectedSearchAnnotation = selectedSearchAnnotationArray[0]
+                
+                // ピンの緯度と経度を取得
+                let latNum = selectedSearchAnnotation.coordinate.latitude
+                let lonNum = selectedSearchAnnotation.coordinate.longitude
+                
+                let location = CLLocation(latitude: latNum, longitude: lonNum)
+                geocoder.reverseGeocodeLocation(location, preferredLocale: nil, completionHandler: GeocodeCompHandler(placemarks:error:))
+                
+                if let selectedSearchAnnotationTitle = selectedSearchAnnotation.title {
+                    placeNameLabel.text = selectedSearchAnnotationTitle
+                }
+            }
+        }
+    }
+    
+    // 経路を表示ボタンクリック時
+    @IBAction func displayDirections(_ sender: Any) {
+        // 配列が空のとき（ロングタップでピンを立てたとき）
+        if searchAnnotationArray.isEmpty == true {
+            let coordinate = CLLocationCoordinate2D(latitude: annotation.coordinate.latitude, longitude: annotation.coordinate.longitude)
+            let placemark = MKPlacemark(coordinate: coordinate, addressDictionary: nil)
+            let mapItem = MKMapItem(placemark: placemark)
+            
+            let options: [String: Any]? = [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving] // 車で移動
+            
+            mapItem.openInMaps(launchOptions: options)
+        }
+        
+        // 配列が空ではないとき（検索でピンを立てたとき）
+        else if searchAnnotationArray.isEmpty == false {
+            // 選択されているピンを新たな配列に格納
+            let selectedSearchAnnotationArray = mapView.selectedAnnotations
+            
+            // 選択されているピンは1つのため、0番目を取り出す
+            let selectedSearchAnnotation = selectedSearchAnnotationArray[0]
+            
+            let coordinate = CLLocationCoordinate2D(latitude: selectedSearchAnnotation.coordinate.latitude, longitude: selectedSearchAnnotation.coordinate.longitude)
+            let placemark = MKPlacemark(coordinate: coordinate, addressDictionary: nil)
+            let mapItem = MKMapItem(placemark: placemark)
+            
+            let options: [String: Any]? = [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving] // 車で移動
+            
+            mapItem.openInMaps(launchOptions: options)
         }
     }
     
@@ -216,6 +274,7 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         print("検索")
         mapView.removeAnnotation(annotation)
         mapView.removeAnnotations(searchAnnotationArray)
+        hiddenDetailsView()
         
         // 前回の検索結果を配列から取り除く
         searchAnnotationArray.removeAll()
@@ -286,6 +345,22 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
         placeSearchBar.text = ""
         // キーボードをとじる
         self.view.endEditing(true)
+    }
+    
+    func displayDetailsView() {
+        detailsViewHeight.constant = 150
+        placeNameLabel.isHidden = false
+        placeAddressLabel.isHidden = false
+        directionsButton.isHidden = false
+        addPlanButton.isHidden = false
+    }
+    
+    func hiddenDetailsView() {
+        detailsViewHeight.constant = 0
+        placeNameLabel.isHidden = true
+        placeAddressLabel.isHidden = true
+        directionsButton.isHidden = true
+        addPlanButton.isHidden = true
     }
     
     // 遷移時に住所と緯度と経度を渡す
